@@ -1,0 +1,43 @@
+#!/usr/bin/env python
+
+import rospy
+from std_msgs.msg import Float64
+from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+
+def move_robot():
+    # Inicializa el nodo ROS
+    rospy.init_node('send_joints', anonymous=True)
+    
+    # Publicadores para cada articulación
+    pub1 = rospy.Publisher('/robot/joint1_position_controller/command', Float64, queue_size=10)
+    pub2 = rospy.Publisher('/robot/joint2_position_controller/command', Float64, queue_size=10)
+    pub3 = rospy.Publisher('/robot/joint3_position_controller/command', Float64, queue_size=10)
+    pub4 = rospy.Publisher('/robot/joint4_position_controller/command', Float64, queue_size=10)
+    pub5 = rospy.Publisher('/robot/joint5_position_controller/command', Float64, queue_size=10)
+    pub6 = rospy.Publisher('/robot/joint6_position_controller/command', Float64, queue_size=10)
+    pub7 = rospy.Publisher('/robot/joint7_position_controller/command', Float64, queue_size=10)
+    
+    # Espera que los publicadores estén listos
+    rospy.sleep(2)
+    
+    # Envía comandos a cada articulación
+    pub1.publish(1.0)
+    pub2.publish(0.5)
+    pub3.publish(-0.5)
+    pub4.publish(1.0)
+    pub5.publish(0.5)
+    pub6.publish(2.2)
+    pub7.publish(0.05)
+    
+    # Mantiene el nodo en funcionamiento
+    rospy.spin()
+
+if __name__ == '__main__':
+    try:
+        move_robot()
+    except rospy.ROSInterruptException:
+        pass
+
+
+
+
