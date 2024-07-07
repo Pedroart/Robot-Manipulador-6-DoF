@@ -6,7 +6,9 @@
 <xacro:property name="Red" value="Gazebo/Red" />
 
 <gazebo>
-  <plugin name="control" filename="libgazebo_ros_control.so"/>
+  <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/project_arm</robotNamespace>
+  </plugin>
 </gazebo>
 <gazebo reference="base_link">
   <material>${Blue}</material>

@@ -1,4 +1,4 @@
-project_arm_controller:
+project_arm:
   # Publish all joint states -----------------------------------
   joint_state_controller:
     type: joint_state_controller/JointStateController

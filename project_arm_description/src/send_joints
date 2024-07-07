@@ -1,43 +1,55 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import rospy
 from std_msgs.msg import Float64
-from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
-def move_robot():
-    # Inicializa el nodo ROS
-    rospy.init_node('send_joints', anonymous=True)
+def publish_joint_positions():
+    rospy.init_node('joint_position_publisher', anonymous=True)
     
-    # Publicadores para cada articulación
-    pub1 = rospy.Publisher('/robot/joint1_position_controller/command', Float64, queue_size=10)
-    pub2 = rospy.Publisher('/robot/joint2_position_controller/command', Float64, queue_size=10)
-    pub3 = rospy.Publisher('/robot/joint3_position_controller/command', Float64, queue_size=10)
-    pub4 = rospy.Publisher('/robot/joint4_position_controller/command', Float64, queue_size=10)
-    pub5 = rospy.Publisher('/robot/joint5_position_controller/command', Float64, queue_size=10)
-    pub6 = rospy.Publisher('/robot/joint6_position_controller/command', Float64, queue_size=10)
-    pub7 = rospy.Publisher('/robot/joint7_position_controller/command', Float64, queue_size=10)
+    joint_1_pub = rospy.Publisher('/project_arm/joint_1_position_controller/command', Float64, queue_size=10)
+    joint_2_pub = rospy.Publisher('/project_arm/joint_2_position_controller/command', Float64, queue_size=10)
+    joint_3_pub = rospy.Publisher('/project_arm/joint_3_position_controller/command', Float64, queue_size=10)
+    joint_4_pub = rospy.Publisher('/project_arm/joint_4_position_controller/command', Float64, queue_size=10)
+    joint_5_pub = rospy.Publisher('/project_arm/joint_5_position_controller/command', Float64, queue_size=10)
+    joint_6_pub = rospy.Publisher('/project_arm/joint_6_position_controller/command', Float64, queue_size=10)
+    joint_7_pub = rospy.Publisher('/project_arm/joint_7_position_controller/command', Float64, queue_size=10)
     
-    # Espera que los publicadores estén listos
-    rospy.sleep(2)
+    rate = rospy.Rate(10)  # 10hz
     
-    # Envía comandos a cada articulación
-    pub1.publish(1.0)
-    pub2.publish(0.5)
-    pub3.publish(-0.5)
-    pub4.publish(1.0)
-    pub5.publish(0.5)
-    pub6.publish(2.2)
-    pub7.publish(0.05)
-    
-    # Mantiene el nodo en funcionamiento
-    rospy.spin()
+    while not rospy.is_shutdown():
+        joint_1_position = Float64()
+        joint_1_position.data = 0.5  # Cambia este valor a la posición deseada para la articulación 1
+
+        joint_2_position = Float64()
+        joint_2_position.data = -1.0  # Cambia este valor a la posición deseada para la articulación 2
+
+        joint_3_position = Float64()
+        joint_3_position.data = 1.0  # Cambia este valor a la posición deseada para la articulación 3
+
+        joint_4_position = Float64()
+        joint_4_position.data = 0.2  # Cambia este valor a la posición deseada para la articulación 4
+
+        joint_5_position = Float64()
+        joint_5_position.data = -0.5  # Cambia este valor a la posición deseada para la articulación 5
+
+        joint_6_position = Float64()
+        joint_6_position.data = 0.8  # Cambia este valor a la posición deseada para la articulación 6
+
+        joint_7_position = Float64()
+        joint_7_position.data = -0.3  # Cambia este valor a la posición deseada para la articulación 7
+
+        joint_1_pub.publish(joint_1_position)
+        joint_2_pub.publish(joint_2_position)
+        joint_3_pub.publish(joint_3_position)
+        joint_4_pub.publish(joint_4_position)
+        joint_5_pub.publish(joint_5_position)
+        joint_6_pub.publish(joint_6_position)
+        joint_7_pub.publish(joint_7_position)
+        
+        rate.sleep()
 
 if __name__ == '__main__':
     try:
-        move_robot()
+        publish_joint_positions()
     except rospy.ROSInterruptException:
         pass
-
-
-
-
