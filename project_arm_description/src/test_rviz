@@ -1,0 +1,46 @@
+#!/usr/bin/env python
+
+import rospy
+from sensor_msgs.msg import JointState
+
+def publish_joint_states():
+    rospy.init_node('joint_states_publisher', anonymous=True)
+    
+    joint_states_pub = rospy.Publisher('/joint_states', JointState, queue_size=10)
+    
+    rate = rospy.Rate(10)  # 10hz
+    
+    while not rospy.is_shutdown():
+        joint_state = JointState()
+        
+        joint_state.header.stamp = rospy.Time.now()
+        
+        joint_state.name = [
+            'joint_1',
+            'joint_2',
+            'joint_3',
+            'joint_4',
+            'joint_5',
+            'joint_6',
+            'joint_7'
+        ]
+        
+        joint_state.position = [
+            0.1,  # Posición deseada para la articulación 1
+            -1.0,  # Posición deseada para la articulación 2
+            1.0,  # Posición deseada para la articulación 3
+            0.2,  # Posición deseada para la articulación 4
+            -0.5,  # Posición deseada para la articulación 5
+            0.8,  # Posición deseada para la articulación 6
+            -0.3   # Posición deseada para la articulación 7
+        ]
+        
+        joint_states_pub.publish(joint_state)
+        
+        rate.sleep()
+
+if __name__ == '__main__':
+    try:
+        publish_joint_states()
+    except rospy.ROSInterruptException:
+        pass
