@@ -18,7 +18,7 @@ def publish_joint_positions():
     
     while not rospy.is_shutdown():
         joint_1_position = Float64()
-        joint_1_position.data = 0.5  # Cambia este valor a la posición deseada para la articulación 1
+        joint_1_position.data = 300  # Cambia este valor a la posición deseada para la articulación 1
 
         joint_2_position = Float64()
         joint_2_position.data = -1.0  # Cambia este valor a la posición deseada para la articulación 2

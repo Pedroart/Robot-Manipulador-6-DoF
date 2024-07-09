@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+
+import rospy
+from sensor_msgs.msg import JointState
+from scipy.interpolate import CubicSpline
+
+from roslib import packages
+import numpy as np
+import rbdl
+from std_msgs.msg import Float64
+
+
+from threading import Condition
+
+def generate_spline_trajectory(start_q, end_q, num_points=100):
+    #Genera una trayectoria suave usando splines cúbicos
+    t = np.linspace(0, 1, num_points + 1)
+    trajectory = []
+    for i in range(len(start_q)):
+        cs = CubicSpline([0, 1], [start_q[i], end_q[i]], bc_type='clamped')
+        trajectory.append(cs(t))
+    return np.array(trajectory).T
+
+class robot_force_control:
+    def __init__(self):
+        self.joint_1_pub = rospy.Publisher('/project_arm/joint_1_position_controller/command', Float64, queue_size=10)
+        self.joint_2_pub = rospy.Publisher('/project_arm/joint_2_position_controller/command', Float64, queue_size=10)
+        self.joint_3_pub = rospy.Publisher('/project_arm/joint_3_position_controller/command', Float64, queue_size=10)
+        self.joint_4_pub = rospy.Publisher('/project_arm/joint_4_position_controller/command', Float64, queue_size=10)
+        self.joint_5_pub = rospy.Publisher('/project_arm/joint_5_position_controller/command', Float64, queue_size=10)
+        self.joint_6_pub = rospy.Publisher('/project_arm/joint_6_position_controller/command', Float64, queue_size=10)
+        self.joint_7_pub = rospy.Publisher('/project_arm/joint_7_position_controller/command', Float64, queue_size=10)
+        #self.pub = rospy.Publisher('/project_arm/joint_states', JointState, queue_size=10)
+  
+        self.position = []
+        self.velocity = []
+        self.cv = Condition()
+        rospy.Subscriber('/project_arm/joint_states', JointState, self.joint_states_callback)
+
+        # Espera hasta recibir un mensaje
+        with self.cv:
+            while not self.position:
+                self.cv.wait()
+
+    def joint_states_callback(self, msg):
+        with self.cv:
+            self.velocity = msg.velocity
+            self.position = msg.position
+            self.cv.notify_all()
+
+    def joint_force_set(self, positions):
+        if len(positions) == 7:
+            self.joint_1_pub.publish(Float64(positions[0]))
+            self.joint_2_pub.publish(Float64(positions[1]))
+            self.joint_3_pub.publish(Float64(positions[2]))
+            self.joint_4_pub.publish(Float64(positions[3]))
+            self.joint_5_pub.publish(Float64(positions[4]))
+            self.joint_6_pub.publish(Float64(positions[5]))
+            self.joint_7_pub.publish(Float64(positions[6]))
+        else:
+            rospy.logwarn("Received joint positions array with incorrect length: expected 7, got %d", len(positions))
+
+
+
+if __name__ == '__main__':
+    
+    rospy.init_node("control_dinamico")
+    gazebo = robot_force_control()
+
+    # Nombres de las articulaciones
+    jnames = ['joint_1',
+              'joint_2',
+              'joint_3',
+              'joint_4',
+              'joint_5',
+              'joint_6',
+              'joint_7',]
+    # Objeto (mensaje) de tipo JointState
+    jstate = JointState()
+    jstate.name = jnames
+
+    # Valores del mensaje
+    
+    
+
+    # Frecuencia del envio (en Hz)
+    freq = 50
+    dt = 1.0/freq
+    rate = rospy.Rate(freq)
+
+    # Modelo RBDL
+    modelo = rbdl.loadModel('/home/pedro/lab_ws/src/Robot-Manipulador-6-DoF/project_arm_description/urdf/robot.urdf')
+    ndof   = modelo.q_size     # Grados de libertad
+    
+    valores = 50*np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    Kp = np.diag(valores)
+    Kd = 2*np.sqrt(Kp)
+
+
+    q = np.array(gazebo.position)
+    qdes2 = np.array([0, 0, 0, 0, 0, 0, 0])
+    qdes3 = generate_spline_trajectory(q, qdes2, num_points=50)
+    
+
+    # Simulador dinamico del robot
+    g     = np.zeros(ndof)  
+    c     = np.zeros(ndof)  
+    zeros = np.zeros(ndof) 
+    f = np.zeros(ndof)
+    Mddq = np.zeros(ndof)
+    b2 = np.zeros(ndof)
+    tau = np.zeros(ndof)
+    M = np.zeros([ndof, ndof])
+    dqlas = np.zeros(ndof)
+    e = np.eye(8)
+    # Bucle de ejecucion continua
+    t = 0.0
+
+    i = 10
+    while not rospy.is_shutdown():
+        
+        # =============================================================
+        # Configuracion articular
+        q = np.array(gazebo.position)
+        dq = np.array(gazebo.velocity)
+        ddq = (-dqlas + dq)/dt*0.01
+        dqlas = dq
+        print(dt)
+        # Configuracion articular deseada
+        q = np.array(gazebo.position)
+        qdes = qdes2
+        
+        # Velocidad articular deseada
+        dqdes = np.array([0., 0., 0., 0., 0., 0., 0.])
+        # Aceleracion articular deseada
+        ddqdes = np.array([0., 0., 0., 0., 0., 0., 0.])
+        # 
+        # =============================================================
+        
+        # ----------------------------
+        # Control dinamico (COMPLETAR)
+        # ----------------------------
+        # Arrays numpy
+        zeros = np.zeros(ndof)          # Vector de ceros
+        tau = np.zeros(ndof)          # Para torque
+        g = np.zeros(ndof)          # Para la gravedad
+        c = np.zeros(ndof)          # Para el vector de Coriolis+centrifuga
+        M = np.zeros([ndof, ndof])  # Para la matriz de inercia
+        e = np.eye(8)               # Vector identidad
+
+
+        # Torque dada la configuracion del robot
+        rbdl.InverseDynamics(modelo, q, dq, ddq, tau)
+
+        # Parte 1: Calcular vector de gravedad, vector de Coriolis/centrifuga,
+        # y matriz M usando solamente InverseDynamics
+
+
+        # Vector gravedad: g= ID(q,0,0)
+        rbdl.InverseDynamics(modelo, q, zeros, zeros, g)
+
+
+        # Vector coriolis: c= (ID(q,dq,0)-g)/dq
+        rbdl.InverseDynamics(modelo, q, dq, zeros, c)
+        coriolis = c-g
+
+
+        # Matriz de inercia: M[1,:] = (ID(dq,0,e[1,:]) )/e[1,:]
+        for i in range(ndof):
+            rbdl.InverseDynamics(modelo, q, zeros, e[i, :], M[i, :])
+            M[i, :] = M[i, :]-g
+
+
+        e= qdes-q
+        de=dqdes-dq
+        dde=ddqdes-ddq
+
+        Kde=Kd.dot(de)
+        Kpe=Kp.dot(e)
+        u= M.dot(ddqdes+Kde+Kpe)+c.dot(ddq)+g #ley de control
+        print(ddq)
+        if(np.linalg.norm(qdes[0:6] - q[0:6]) < 0.1):
+            i=i+10
+        gazebo.joint_force_set(u)
+
+        jstate.header.stamp = rospy.Time.now()
+        jstate.position = u
+        #gazebo.pub.publish(jstate)
+        #print(q)        
+        rate.sleep()

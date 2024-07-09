@@ -185,7 +185,7 @@
   <parent link="base_link"/>
   <child link="link_1_1"/>
   <axis xyz="0.0 0.0 1.0"/>
-  <limit upper="3.141593" lower="0.0" effort="100" velocity="100"/>
+  <limit upper="3.141593" lower="0.0" effort="1000" velocity="10"/>
 </joint>
 
 <joint name="joint_2" type="revolute">
@@ -193,7 +193,7 @@
   <parent link="link_1_1"/>
   <child link="link_2_1"/>
   <axis xyz="0.0 1.0 0.0"/>
-  <limit upper="1.570796" lower="-1.570796" effort="100" velocity="100"/>
+  <limit upper="1.570796" lower="-1.570796" effort="1000" velocity="10"/>
 </joint>
 
 <joint name="joint_3" type="revolute">
@@ -201,7 +201,7 @@
   <parent link="link_2_1"/>
   <child link="link_3_1"/>
   <axis xyz="0.0 1.0 0.0"/>
-  <limit upper="0.785398" lower="-3.926991" effort="100" velocity="100"/>
+  <limit upper="0.785398" lower="-3.926991" effort="1000" velocity="10"/>
 </joint>
 
 <joint name="joint_4" type="revolute">
@@ -209,7 +209,7 @@
   <parent link="link_3_1"/>
   <child link="link_4_1"/>
   <axis xyz="1.0 0.0 0.0"/>
-  <limit upper="3.141593" lower="0.0" effort="100" velocity="100"/>
+  <limit upper="3.141593" lower="0.0" effort="1000" velocity="10"/>
 </joint>
 
 <joint name="joint_5" type="revolute">
@@ -217,7 +217,7 @@
   <parent link="link_4_1"/>
   <child link="link_5_1"/>
   <axis xyz="0.0 1.0 0.0"/>
-  <limit upper="2.356194" lower="-2.356194" effort="100" velocity="100"/>
+  <limit upper="2.356194" lower="-2.356194" effort="1000" velocity="10"/>
 </joint>
 
 <joint name="joint_6" type="revolute">
@@ -225,7 +225,7 @@
   <parent link="link_5_1"/>
   <child link="link_6_1"/>
   <axis xyz="1.0 0.0 0.0"/>
-  <limit upper="6.283185" lower="0.0" effort="100" velocity="100"/>
+  <limit upper="6.283185" lower="0.0" effort="1000" velocity="10"/>
 </joint>
 
 <joint name="joint_7" type="prismatic">
@@ -233,7 +233,7 @@
   <parent link="link_6_1"/>
   <child link="link_7_1"/>
   <axis xyz="1.0 0.0 0.0"/>
-  <limit upper="0.05" lower="0.0" effort="100" velocity="100"/>
+  <limit upper="0.05" lower="0.0" effort="1000" velocity="10"/>
 </joint>
 
 </robot>

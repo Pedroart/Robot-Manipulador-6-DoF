@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+
+import rospy
+from sensor_msgs.msg import JointState
+from scipy.interpolate import CubicSpline
+
+from roslib import packages
+import numpy as np
+import rbdl
+from std_msgs.msg import Float64
+
+import csv
+from threading import Condition
+
+
+
+class robot_force_control:
+    def __init__(self):
+        self.joint_1_pub = rospy.Publisher('/project_arm/joint_1_position_controller/command', Float64, queue_size=10)
+        self.joint_2_pub = rospy.Publisher('/project_arm/joint_2_position_controller/command', Float64, queue_size=10)
+        self.joint_3_pub = rospy.Publisher('/project_arm/joint_3_position_controller/command', Float64, queue_size=10)
+        self.joint_4_pub = rospy.Publisher('/project_arm/joint_4_position_controller/command', Float64, queue_size=10)
+        self.joint_5_pub = rospy.Publisher('/project_arm/joint_5_position_controller/command', Float64, queue_size=10)
+        self.joint_6_pub = rospy.Publisher('/project_arm/joint_6_position_controller/command', Float64, queue_size=10)
+        self.joint_7_pub = rospy.Publisher('/project_arm/joint_7_position_controller/command', Float64, queue_size=10)
+  
+        self.position = []
+        self.velocity = []
+        self.cv = Condition()
+        rospy.Subscriber('/project_arm/joint_states', JointState, self.joint_states_callback)
+
+        # Espera hasta recibir un mensaje
+        with self.cv:
+            while not self.position:
+                self.cv.wait()
+
+    def joint_states_callback(self, msg):
+        with self.cv:
+            self.velocity = msg.velocity
+            self.position = msg.position
+            self.cv.notify_all()
+
+    def joint_force_set(self, positions):
+        if len(positions) == 7:
+            self.joint_1_pub.publish(Float64(positions[0]))
+            self.joint_2_pub.publish(Float64(positions[1]))
+            self.joint_3_pub.publish(Float64(positions[2]))
+            self.joint_4_pub.publish(Float64(positions[3]))
+            self.joint_5_pub.publish(Float64(positions[4]))
+            self.joint_6_pub.publish(Float64(positions[5]))
+            self.joint_7_pub.publish(Float64(positions[6]))
+        else:
+            rospy.logwarn("Received joint positions array with incorrect length: expected 7, got %d", len(positions))
+
+
+def proceso():
+    
+    rospy.init_node("control_dinamico")
+    gazebo = robot_force_control()
+
+
+    # Frecuencia del envío (en Hz)
+    freq = 50
+    dt = 1.0 / freq
+    rate = rospy.Rate(freq)
+
+    # Modelo RBDL
+    modelo = rbdl.loadModel('/home/pedro/lab_ws/src/Robot-Manipulador-6-DoF/project_arm_description/urdf/robot.urdf')
+    ndof = modelo.q_size  # Grados de libertad
+
+    Kp = np.diag(np.full(7, 10))
+    Kd = np.diag(np.full(7, 20))
+
+    Kp[3, 3] = 8
+    Kd[3, 3] = 9
+    Kp[4, 4] = 90
+    Kd[4, 4] = 9
+
+    Kp[6, 6] = 100
+    Kd[6, 6] = 0
+
+    q = np.array(gazebo.position)
+    qdes = np.array([0, 0, -1.37, 0, 0, 0, 0.00])
+   
+    # Simulador dinámico del robot
+    g     = np.zeros(ndof)  
+    c     = np.zeros(ndof)  
+    zeros = np.zeros(ndof) 
+    f = np.zeros(ndof)
+    Mddq = np.zeros(ndof)
+    b2 = np.zeros(ndof)
+    tau = np.zeros(ndof)
+    M2 = np.zeros([ndof, ndof])
+    dqlas = np.zeros(ndof)
+    # Bucle de ejecución continua
+    t = 0.0
+
+    # Abre el archivo para escritura
+    with open('control_din_pd_max_grav.csv', mode='w', newline='') as file:
+        writer = csv.writer(file)
+        # Escribe los encabezados
+        writer.writerow(
+            ['time'] +
+            ['qd' + str(i+1) for i in range(ndof)] +
+            ['q' + str(i+1) for i in range(ndof)] + 
+            ['u' + str(i+1) for i in range(ndof)]
+            )
+
+        while not rospy.is_shutdown():
+            # Configuración articular
+            q = np.array(gazebo.position)
+            dq = np.array(gazebo.velocity)
+            ddq = (-dqlas + dq)/dt
+            dqlas = dq
+            # Control dinámico
+            rbdl.InverseDynamics(modelo, q, zeros, zeros, g)
+            #rbdl.InverseDynamics(modelo, q, dq, ddq, tau)
+            #rbdl.CompositeRigidBodyAlgorithm(modelo, q, M2)
+            #rbdl.NonlinearEffects(modelo, q, dq, b2)
+            c = b2-g
+            u = g + np.dot(Kp, (qdes - q)) - np.dot(Kd, dq)
+
+            if np.linalg.norm(qdes[0:5] - q[0:5]) < 0.01:
+                break
+
+            gazebo.joint_force_set(u)
+
+            # Escribe los valores de q y u en el archivo
+            writer.writerow(
+                [t] + 
+                qdes.tolist() +
+                q.tolist() + 
+                u.tolist())
+
+            rate.sleep()
+            t += dt
+
+
+if __name__ == '__main__':
+    try:
+        proceso()
+    except rospy.ROSInterruptException:
+        pass
