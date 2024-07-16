@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+
+import rospy
+from sensor_msgs.msg import JointState
+from markers import *
+from lab4functions import *
+import numpy as np
+from copy import copy
+
+def angulo_suplementario(angulos):
+    suplementarios = []
+    for angulo in angulos:
+        if angulo > 180:
+            suplementarios.append(angulo)
+        else:
+            suplementarios.append(180 - angulo)
+    return np.array(suplementarios)
+
+
+
+
+if __name__ == '__main__':
+
+    # Initialize the node
+    rospy.init_node("testKineControlPosition")
+    print('starting motion ... ')
+    # Publisher: publish to the joint_states topic
+    pub = rospy.Publisher('joint_states', JointState, queue_size=10)
+    # Files for the logs
+    fxcurrent = open("/home/user/catkin_ws/src/project_arm_description/xcurrent.txt", "w")                
+    fxdesired = open("/home/user/catkin_ws/src/project_arm_description/xdesired.txt", "w")
+    fq = open("/home/user/catkin_ws/src/project_arm_description/q.txt", "w")
+    err = open("/home/user/catkin_ws/src/project_arm_description/err.txt", "w")
+    # Markers for the current and desired positions
+    bmarker_current  = BallMarker(color['RED'])
+    bmarker_desired = BallMarker(color['GREEN'])
+
+    # Joint names
+    jnames = ['joint_1', 'joint_2', 'joint_3', 'joint_4', 'joint_5', 'joint_6', 'joint_7']
+
+    # Desired position
+    xd = np.array([0.9, 0.3, 0.7])
+    # 0.5, 0.6, 1.2
+    #0.6 0.6 0.6
+    #([0.8, 0.5, 1])
+    # Initial configuration
+    q0 = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+    # Resulting initial position (end effector with respect to the base link)
+    T = fkine_7dof(q0)
+    
+    x0 = T[0:3, 3]
+
+    # Red marker shows the achieved position
+    bmarker_current.xyz(x0)
+    # Green marker shows the desired position
+    bmarker_desired.xyz(xd)
+
+    # Instance of the JointState message
+    jstate = JointState()
+    # Values of the message
+    jstate.header.stamp = rospy.Time.now()
+    jstate.name = jnames
+    # Add the head joint value (with value 0) to the joints
+    jstate.position = q0
+
+    # Frequency (in Hz) and control period 
+    freq = 100  # Adjust this value
+    dt = 1.0 / freq
+    rate = rospy.Rate(freq)
+
+    # Initial joint configuration
+    q = copy(q0)
+
+    # Ganancia cinematica
+    kd = 1.2 # Adjust this value
+    #ki= 0.01
+
+    # Integral term for PI controller
+    integral_error = np.zeros(3)
+
+    # Main loop
+    while not rospy.is_shutdown():
+        # Current time (needed for ROS)
+        jstate.header.stamp = rospy.Time.now()
+        
+        # Control Cinematico
+        J = jacobian_position(q, delta=0.00001)  
+        T_qact = fkine_7dof(q)
+        x = T_qact[0:3, 3]
+        e = xd - x  # Error calculado
+
+        # Derivada del error
+        de = kd * e 
+
+        if np.linalg.matrix_rank(J, 1e-4) < 7:
+            dq = (J.T @ np.linalg.inv(J @ J.T + 0.007 * np.eye(3))).dot(de)  # Pseudo-Inversa Regularizada
+        else:
+            dq = np.linalg.pinv(J).dot(de)  # Pseudo-Inversa de Moore-Penrose
+
+        # Integración de Euler
+        q = q + dt * dq
+
+        #q = angulo_suplementario(q)
+
+        if (q[6]>0.05):
+            q[6] = 0.05
+
+        if(np.linalg.norm(e) < 0.005):
+            break
+  
+        # Log values                                                      
+        fxcurrent.write(f"{x[0]} {x[1]} {x[2]}\n")
+        fxdesired.write(f"{xd[0]} {xd[1]} {xd[2]}\n")
+        fq.write(" ".join(map(str, q)) + "\n")
+        err.write(" ".join(map(str, e)) + "\n")
+        
+        # Publish the message
+        jstate.position = q
+        pub.publish(jstate)
+        bmarker_desired.xyz(xd)
+        bmarker_current.xyz(x)
+        
+
+        print(e)
+
+        # Wait for the next iteration
+        rate.sleep()
+
+    print('ending motion ...')
+    fxcurrent.close()
+    fxdesired.close()
+    fq.close()
