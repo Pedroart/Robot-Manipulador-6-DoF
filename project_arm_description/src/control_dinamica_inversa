@@ -81,7 +81,7 @@ def proceso():
     rate = rospy.Rate(freq)
 
     # Modelo RBDL
-    modelo = rbdl.loadModel('/home/pedro/lab_ws/src/Robot-Manipulador-6-DoF/project_arm_description/urdf/robot.urdf')
+    modelo = rbdl.loadModel('/home/pedroart/dev_ws/src/noLineal/Robot-Manipulador-6-DoF/project_arm_description/urdf/robot.urdf')
     ndof   = modelo.q_size     # Grados de libertad
     
     valores = 50*np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
